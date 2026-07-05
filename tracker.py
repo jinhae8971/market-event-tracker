@@ -34,7 +34,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 EVENTS_PATH = os.path.join(BASE, "events.json")
 HISTORY_PATH = os.path.join(BASE, "history.json")
 README_PATH = os.path.join(BASE, "README.md")
-HTML_PATH = os.path.join(BASE, "docs", "dashboard.html")
+HTML_PATH = os.path.join(BASE, "docs", "index.html")
 
 KST = timezone(timedelta(hours=9))
 REPO_URL = "https://github.com/jinhae8971/market-event-tracker"
