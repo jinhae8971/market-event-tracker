@@ -4,28 +4,23 @@
 market-event-tracker
 ====================
 2026년 주요 증시 이벤트의 '당일' 국내(KOSPI)/미국(S&P500, NASDAQ) 등락을
-자동으로 누적 기록하고, 대시보드(README.md + docs/dashboard.html)를 갱신하며,
+자동으로 누적 기록하고, 대시보드(README.md + docs/index.html)를 갱신하며,
 이벤트 당일 텔레그램으로 결과를 통지한다.
 
-동작 원리
----------
-- 매일 22:30 UTC(=익일 07:30 KST) 실행. 실행 시점 UTC 날짜까지 마감된
-  국내/미국 세션 데이터가 모두 확보되므로 그날 이벤트를 기록할 수 있다.
-- 백필(backfill) 방식: 과거 이벤트 중 미기록/미완료 항목을 매 실행 시 재시도하므로
-  워크플로우가 하루 누락돼도 다음 실행에서 자동 복구된다.
-- 데이터 원천: FinanceDataReader(주력) → yfinance(폴백).
-
-파일
+특징
 ----
-- events.json  : 추적 이벤트 정의(입력)
-- history.json : 이벤트별 등락 결과 누적(자동 갱신)
-- README.md / docs/dashboard.html : 대시보드(자동 생성)
+- 같은 날짜에 여러 이벤트(예: 금통위 + TSMC 실적)가 있어도 자동 그룹핑되어
+  하나의 '이벤트 데이'로 등락을 함께 기록한다.
+- 매일 22:30 UTC(=익일 07:30 KST) 실행. 국내/미국 세션 마감 후라 당일 데이터 확보.
+- 백필: 과거 미기록/미완료 이벤트를 매 실행 시 재시도 → 하루 누락돼도 자동 복구.
+- 데이터 원천: FinanceDataReader(주력) → yfinance(폴백).
 """
 
 import os
 import sys
 import json
 import warnings
+from collections import defaultdict
 from datetime import datetime, timezone, timedelta
 
 warnings.filterwarnings("ignore")
@@ -38,6 +33,7 @@ HTML_PATH = os.path.join(BASE, "docs", "index.html")
 
 KST = timezone(timedelta(hours=9))
 REPO_URL = "https://github.com/jinhae8971/market-event-tracker"
+PAGES_URL = "https://jinhae8971.github.io/market-event-tracker/"
 
 # 추적 지수: (표시명, FDR 심볼, yfinance 심볼, 국기)
 INDICES = [
@@ -47,7 +43,12 @@ INDICES = [
 ]
 
 IMPORTANCE_STAR = {"high": "⭐⭐", "mid": "⭐", "low": "·"}
-FINALIZE_AFTER_DAYS = 3  # 이벤트 후 N일 지나면 (휴장 등으로) 일부 지수 없어도 확정
+IMP_RANK = {"high": 3, "mid": 2, "low": 1}
+REGION_FLAG = {"KR": "🇰🇷", "US": "🇺🇸", "EU": "🇪🇺", "TW": "🇹🇼", "GL": "🌐"}
+FINALIZE_AFTER_DAYS = 3
+
+DIR_EMOJI = {"up": "🔺", "down": "🔻", "flat": "➖", "closed": "⚪", "pending": "⏳"}
+DIR_LABEL = {"up": "상승", "down": "하락", "flat": "보합", "closed": "휴장", "pending": "대기"}
 
 
 # ────────────────────────── 유틸 ──────────────────────────
@@ -74,7 +75,6 @@ def save_json(path, data):
 
 
 def kdate(d):
-    """'2026-07-07' → '07/07 (화)'"""
     dt = datetime.strptime(d, "%Y-%m-%d")
     wd = "월화수목금토일"[dt.weekday()]
     return f"{dt.month:02d}/{dt.day:02d} ({wd})"
@@ -90,8 +90,11 @@ def direction_of(pct):
     return "flat"
 
 
-DIR_EMOJI = {"up": "🔺", "down": "🔻", "flat": "➖", "closed": "⚪", "pending": "⏳"}
-DIR_LABEL = {"up": "상승", "down": "하락", "flat": "보합", "closed": "휴장", "pending": "대기"}
+def group_by_date(events):
+    by = defaultdict(list)
+    for e in events:
+        by[e["date"]].append(e)
+    return by
 
 
 # ────────────────────────── 데이터 취득 ──────────────────────────
@@ -99,8 +102,7 @@ def _fetch_fdr(sym, event_date):
     import FinanceDataReader as fdr
     start = (datetime.strptime(event_date, "%Y-%m-%d") - timedelta(days=10)).strftime("%Y-%m-%d")
     end = (datetime.strptime(event_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
-    df = fdr.DataReader(sym, start, end)
-    return df
+    return fdr.DataReader(sym, start, end)
 
 
 def _fetch_yf(sym, event_date):
@@ -114,7 +116,6 @@ def _fetch_yf(sym, event_date):
 
 
 def fetch_index_on(fdr_sym, yf_sym, event_date):
-    """이벤트 당일 종가/전일比 등락률을 반환. 해당일 데이터 없으면 change=None(휴장)."""
     df = None
     for fetcher, sym in ((_fetch_fdr, fdr_sym), (_fetch_yf, yf_sym)):
         try:
@@ -125,13 +126,10 @@ def fetch_index_on(fdr_sym, yf_sym, event_date):
             df = None
     if df is None or len(df) == 0:
         return {"close": None, "change_pct": None, "direction": "pending"}
-
     df = df[df["Close"].notna()]
     dates = [d.strftime("%Y-%m-%d") for d in df.index]
     if event_date not in dates:
-        # 해당 지수는 이벤트 당일 휴장(예: 미국 독립기념일)
         return {"close": None, "change_pct": None, "direction": "closed"}
-
     idx = dates.index(event_date)
     close = float(df["Close"].iloc[idx])
     if idx == 0:
@@ -145,48 +143,37 @@ def fetch_index_on(fdr_sym, yf_sym, event_date):
     }
 
 
-# ────────────────────────── 처리 로직 ──────────────────────────
-def process(events, history):
+# ────────────────────────── 처리 ──────────────────────────
+def process(by_date, history):
     today = datetime.now(timezone.utc).date()
-    new_events = []  # 이번 실행에서 '처음' 기록된 이벤트(텔레그램 통지 대상)
-
-    for ev in events:
-        d = ev["date"]
+    new_dates = []
+    for d in sorted(by_date):
         ev_date = datetime.strptime(d, "%Y-%m-%d").date()
         if ev_date > today:
-            continue  # 아직 도래하지 않음
-
+            continue
         existing = history.get(d)
         if existing and existing.get("finalized"):
-            continue  # 확정된 항목은 재조회 안 함
-
-        # 지수별 취득
-        results = {}
-        for label, fdr_sym, yf_sym, _flag in INDICES:
-            results[label] = fetch_index_on(fdr_sym, yf_sym, d)
-
+            continue
+        results = {label: fetch_index_on(fdr_sym, yf_sym, d) for label, fdr_sym, yf_sym, _f in INDICES}
         age_days = (today - ev_date).days
-        resolved = all(r["direction"] not in ("pending",) for r in results.values())
+        resolved = all(r["direction"] != "pending" for r in results.values())
         finalized = resolved or age_days >= FINALIZE_AFTER_DAYS
-
         entry = {
-            "event": ev["name"],
-            "region": ev.get("region", ""),
-            "importance": ev.get("importance", "mid"),
+            "events": [{"name": e["name"], "region": e.get("region", ""),
+                        "importance": e.get("importance", "mid"),
+                        "tentative": bool(e.get("tentative", False))} for e in by_date[d]],
             "indices": results,
             "finalized": finalized,
             "recorded_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M KST"),
         }
-
         is_new = existing is None
         history[d] = entry
         if is_new:
-            new_events.append((d, entry))
+            new_dates.append((d, entry))
+    return history, new_dates
 
-    return history, new_events
 
-
-# ────────────────────────── 대시보드 렌더 ──────────────────────────
+# ────────────────────────── 렌더 공통 ──────────────────────────
 def _cell(r):
     dirn = r["direction"]
     emo = DIR_EMOJI.get(dirn, "⏳")
@@ -197,93 +184,87 @@ def _cell(r):
     return "⏳ 대기"
 
 
-def render_readme(events, history):
-    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
-    done = {d: e for d, e in history.items()}
-    done_dates = sorted(done.keys())
-    upcoming = [e for e in events if e["date"] not in history]
-    upcoming = sorted(upcoming, key=lambda x: x["date"])
+def _entry_label(entry_events):
+    parts = []
+    for e in entry_events:
+        tag = " (잠정일)" if e.get("tentative") else ""
+        parts.append(f"{e['name']}{tag}")
+    return " + ".join(parts)
 
-    # 집계
-    tally = {lbl: {"up": 0, "down": 0, "flat": 0, "closed": 0} for lbl, *_ in INDICES}
+
+def _entry_star(entry_events):
+    imp = max(entry_events, key=lambda e: IMP_RANK.get(e.get("importance", "mid"), 2)).get("importance", "mid")
+    return IMPORTANCE_STAR.get(imp, "·")
+
+
+# ────────────────────────── README ──────────────────────────
+def render_readme(by_date, history):
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M")
+    done_dates = sorted(history.keys())
+    upcoming_dates = sorted([d for d in by_date if d not in history])
+
+    tally = {lbl: {"up": 0, "down": 0, "flat": 0} for lbl, *_ in INDICES}
     for d in done_dates:
         for lbl, *_ in INDICES:
-            dirn = done[d]["indices"][lbl]["direction"]
+            dirn = history[d]["indices"][lbl]["direction"]
             if dirn in tally[lbl]:
                 tally[lbl][dirn] += 1
 
-    L = []
-    L.append("# 📊 Market Event Tracker")
-    L.append("")
-    L.append("> 2026년 주요 증시 이벤트 **당일** 국내(KOSPI)·미국(S&P500·NASDAQ) 등락을 자동 누적하는 대시보드")
-    L.append(f">")
-    L.append(f"> 🕐 최종 업데이트: **{now} KST**  ·  🤖 GitHub Actions 자동 생성")
-    L.append("")
-    L.append("---")
-    L.append("")
-    L.append("## 📈 누적 요약")
-    L.append("")
-    L.append(f"- **추적 이벤트**: 총 {len(events)}건 (✅ 완료 {len(done_dates)} · ⏳ 예정 {len(upcoming)})")
+    L = ["# 📊 Market Event Tracker", "",
+         "> 2026년 주요 증시 이벤트 **당일** 국내(KOSPI)·미국(S&P500·NASDAQ) 등락을 자동 누적하는 대시보드",
+         ">",
+         f"> 🕐 최종 업데이트: **{now} KST**  ·  🤖 GitHub Actions 자동 생성  ·  [웹 대시보드]({PAGES_URL})",
+         "", "---", "", "## 📈 누적 요약", "",
+         f"- **추적 이벤트 데이**: 총 {len(by_date)}일 (✅ 완료 {len(done_dates)} · ⏳ 예정 {len(upcoming_dates)})"]
     for lbl, *_ in INDICES:
         t = tally[lbl]
         L.append(f"- **{lbl}**: 🔺 상승 {t['up']}회 · 🔻 하락 {t['down']}회 · ➖ 보합 {t['flat']}회")
-    L.append("")
-    L.append("---")
-    L.append("")
-    L.append("## ✅ 완료된 이벤트 — 당일 등락")
-    L.append("")
+    L += ["", "---", "", "## ✅ 완료된 이벤트 — 당일 등락", ""]
     if done_dates:
-        L.append("| 날짜 | 이벤트 | 중요도 | 🇰🇷 KOSPI | 🇺🇸 S&P500 | 🇺🇸 NASDAQ |")
-        L.append("|---|---|:---:|:---:|:---:|:---:|")
+        L += ["| 날짜 | 이벤트 | 중요도 | 🇰🇷 KOSPI | 🇺🇸 S&P500 | 🇺🇸 NASDAQ |",
+              "|---|---|:---:|:---:|:---:|:---:|"]
         for d in done_dates:
-            e = done[d]
-            star = IMPORTANCE_STAR.get(e["importance"], "·")
-            row = [kdate(d), e["event"], star]
+            e = history[d]
+            row = [kdate(d), _entry_label(e["events"]), _entry_star(e["events"])]
             for lbl, *_ in INDICES:
                 row.append(_cell(e["indices"][lbl]))
             L.append("| " + " | ".join(row) + " |")
     else:
         L.append("_아직 도래한 이벤트가 없습니다. 첫 이벤트(2026-07-07) 이후 자동 기록됩니다._")
-    L.append("")
-    L.append("## ⏳ 예정된 이벤트")
-    L.append("")
-    if upcoming:
-        L.append("| 날짜 | 이벤트 | 중요도 |")
-        L.append("|---|---|:---:|")
-        for e in upcoming:
-            L.append(f"| {kdate(e['date'])} | {e['name']} | {IMPORTANCE_STAR.get(e['importance'],'·')} |")
+    L += ["", "## ⏳ 예정된 이벤트", ""]
+    if upcoming_dates:
+        L += ["| 날짜 | 이벤트 | 중요도 |", "|---|---|:---:|"]
+        for d in upcoming_dates:
+            evs = by_date[d]
+            L.append(f"| {kdate(d)} | {_entry_label(evs)} | {_entry_star(evs)} |")
     else:
         L.append("_예정된 이벤트가 없습니다._")
-    L.append("")
-    L.append("---")
-    L.append("")
-    L.append("## 🗂 데이터 & 규칙")
-    L.append("")
-    L.append("- **원천**: FinanceDataReader (주력) → yfinance (폴백)")
-    L.append("- **지수**: KOSPI(`KS11`) · S&P500(`US500`) · NASDAQ(`IXIC`)")
-    L.append("- **등락 기준**: 이벤트 당일 종가의 **전일 대비** 변화율")
-    L.append("- **표기**: 🔺 상승 · 🔻 하락 · ➖ 보합(±0.05% 이내) · ⚪ 휴장 · ⏳ 대기")
-    L.append("- **참고**: 미국발 이벤트(FOMC 등)에 대한 KOSPI 반응은 익일 세션에 반영되는 경향이 있음")
-    L.append("- **갱신 주기**: 매일 22:30 UTC(익일 07:30 KST) · 누락 시 자동 백필")
-    L.append("")
-    L.append(f"<sub>🤖 자동 관리 시스템 · [{REPO_URL.split('//')[1]}]({REPO_URL})</sub>")
-    L.append("")
+    L += ["", "---", "", "## 🗂 데이터 & 규칙", "",
+          "- **원천**: FinanceDataReader (주력) → yfinance (폴백)",
+          "- **지수**: KOSPI(`KS11`) · S&P500(`US500`) · NASDAQ(`IXIC`)",
+          "- **등락 기준**: 이벤트 당일 종가의 **전일 대비** 변화율",
+          "- **표기**: 🔺 상승 · 🔻 하락 · ➖ 보합(±0.05% 이내) · ⚪ 휴장 · ⏳ 대기",
+          "- **그룹핑**: 같은 날 여러 이벤트(예: 금통위 + TSMC 실적)는 한 행에 묶어 표기",
+          "- **(잠정일)**: 공식 확정 전 예상일 — 확정 시 events.json 갱신",
+          "- **참고**: 미국발 이벤트(FOMC 등)에 대한 KOSPI 반응은 익일 세션에 반영되는 경향",
+          "- **갱신**: 매일 22:30 UTC(익일 07:30 KST) · 누락 시 자동 백필",
+          "", f"<sub>🤖 자동 관리 시스템 · [{REPO_URL.split('//')[1]}]({REPO_URL})</sub>", ""]
     with open(README_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(L))
 
 
-def render_html(events, history):
+# ────────────────────────── HTML ──────────────────────────
+def render_html(by_date, history):
     now = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
     done_dates = sorted(history.keys())
-    upcoming = sorted([e for e in events if e["date"] not in history], key=lambda x: x["date"])
+    upcoming_dates = sorted([d for d in by_date if d not in history])
 
     def color(dirn):
         return {"up": "#e03131", "down": "#1971c2", "flat": "#868e96",
                 "closed": "#adb5bd", "pending": "#adb5bd"}.get(dirn, "#adb5bd")
 
     def cell_html(r):
-        dirn = r["direction"]
-        emo = DIR_EMOJI.get(dirn, "⏳")
+        dirn = r["direction"]; emo = DIR_EMOJI.get(dirn, "⏳")
         if dirn in ("up", "down", "flat") and r.get("change_pct") is not None:
             txt = f"{r['change_pct']:+.2f}%"
         elif dirn == "closed":
@@ -295,64 +276,70 @@ def render_html(events, history):
     rows = ""
     for d in done_dates:
         e = history[d]
-        star = IMPORTANCE_STAR.get(e["importance"], "·")
         cells = "".join(cell_html(e["indices"][lbl]) for lbl, *_ in INDICES)
-        rows += (f'<tr><td>{kdate(d)}</td><td style="text-align:left">{e["event"]}</td>'
-                 f'<td style="text-align:center">{star}</td>{cells}</tr>')
+        rows += (f'<tr><td>{kdate(d)}</td><td style="text-align:left">{_entry_label(e["events"])}</td>'
+                 f'<td style="text-align:center">{_entry_star(e["events"])}</td>{cells}</tr>')
     if not rows:
         rows = '<tr><td colspan="6" style="text-align:center;color:#868e96;padding:24px">아직 도래한 이벤트가 없습니다</td></tr>'
 
     up_rows = ""
-    for e in upcoming:
-        up_rows += (f'<tr><td>{kdate(e["date"])}</td><td style="text-align:left">{e["name"]}</td>'
-                    f'<td style="text-align:center">{IMPORTANCE_STAR.get(e["importance"],"·")}</td></tr>')
+    for d in upcoming_dates:
+        evs = by_date[d]
+        up_rows += (f'<tr><td>{kdate(d)}</td><td style="text-align:left">{_entry_label(evs)}</td>'
+                    f'<td style="text-align:center">{_entry_star(evs)}</td></tr>')
+
+    tally = {lbl: {"up": 0, "down": 0} for lbl, *_ in INDICES}
+    for d in done_dates:
+        for lbl, *_ in INDICES:
+            dirn = history[d]["indices"][lbl]["direction"]
+            if dirn in tally[lbl]:
+                tally[lbl][dirn] += 1
+    chips = " ".join(f'<span class="chip">{lbl} 🔺{tally[lbl]["up"]} 🔻{tally[lbl]["down"]}</span>' for lbl, *_ in INDICES)
 
     html = f"""<!doctype html><html lang="ko"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Market Event Tracker</title>
 <style>
-:root{{color-scheme:light dark}}
-*{{box-sizing:border-box}}
+:root{{color-scheme:light dark}}*{{box-sizing:border-box}}
 body{{font-family:-apple-system,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;margin:0;background:#0d1117;color:#e6edf3;padding:24px}}
-.wrap{{max-width:920px;margin:0 auto}}
-h1{{font-size:22px;margin:0 0 4px}}
-.sub{{color:#8b949e;font-size:13px;margin-bottom:20px}}
+.wrap{{max-width:940px;margin:0 auto}}
+h1{{font-size:22px;margin:0 0 4px}}.sub{{color:#8b949e;font-size:13px;margin-bottom:16px}}
+.chips{{margin-bottom:18px}}.chip{{display:inline-block;background:#161b22;border:1px solid #30363d;border-radius:20px;padding:5px 12px;font-size:12px;margin:0 6px 6px 0;color:#c9d1d9}}
 .card{{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px 20px;margin-bottom:18px}}
 h2{{font-size:15px;margin:0 0 12px;color:#c9d1d9}}
 table{{width:100%;border-collapse:collapse;font-size:13px}}
 th,td{{padding:9px 8px;border-bottom:1px solid #21262d}}
-th{{text-align:center;color:#8b949e;font-weight:600;font-size:12px}}
-td{{text-align:center}}
-.legend{{font-size:12px;color:#8b949e;line-height:1.9}}
+th{{text-align:center;color:#8b949e;font-weight:600;font-size:12px}}td{{text-align:center}}
+.legend{{font-size:12px;color:#8b949e;line-height:1.9}}a{{color:#58a6ff}}
 </style></head><body><div class="wrap">
 <h1>📊 Market Event Tracker</h1>
 <div class="sub">2026 주요 증시 이벤트 당일 국내/미국 등락 누적 · 최종 업데이트 {now}</div>
+<div class="chips">{chips}</div>
 <div class="card"><h2>✅ 완료된 이벤트 — 당일 등락</h2>
 <table><thead><tr><th>날짜</th><th style="text-align:left">이벤트</th><th>중요도</th><th>🇰🇷 KOSPI</th><th>🇺🇸 S&amp;P500</th><th>🇺🇸 NASDAQ</th></tr></thead><tbody>{rows}</tbody></table></div>
 <div class="card"><h2>⏳ 예정된 이벤트</h2>
 <table><thead><tr><th>날짜</th><th style="text-align:left">이벤트</th><th>중요도</th></tr></thead><tbody>{up_rows or '<tr><td colspan=3 style="color:#868e96">없음</td></tr>'}</tbody></table></div>
-<div class="card legend">🔺 상승 · 🔻 하락 · ➖ 보합 · ⚪ 휴장 · ⏳ 대기<br>
-원천: FinanceDataReader → yfinance 폴백 · 등락 = 당일 종가 전일比</div>
+<div class="card legend">🔺 상승 · 🔻 하락 · ➖ 보합 · ⚪ 휴장 · ⏳ 대기 &nbsp;|&nbsp; 같은 날 여러 이벤트는 한 행에 묶음 · (잠정일)=예상일<br>
+원천: FinanceDataReader → yfinance 폴백 · 등락 = 당일 종가 전일比 · <a href="{REPO_URL}">GitHub</a></div>
 </div></body></html>"""
     with open(HTML_PATH, "w", encoding="utf-8") as f:
         f.write(html)
 
 
 # ────────────────────────── 텔레그램 ──────────────────────────
-def notify(new_events, history, cfg):
+def notify(new_dates, history, cfg):
     token, chat = cfg["telegram_token"], cfg["telegram_chat_id"]
-    if not token or not chat or not new_events:
+    if not token or not chat or not new_dates:
         return
     import requests
     done_n = len(history)
-    for d, e in new_events:
-        star = IMPORTANCE_STAR.get(e["importance"], "·")
-        lines = [f"🎯 <b>이벤트 데이 결과</b> · {kdate(d)}",
-                 f"<b>{e['event']}</b> {star}", ""]
-        for lbl, _fdr, _yf, flag in INDICES:
-            r = e["indices"][lbl]
-            dirn = r["direction"]
-            emo = DIR_EMOJI.get(dirn, "⏳")
+    for d, e in new_dates:
+        ev_names = "\n".join(
+            f"  • {REGION_FLAG.get(x.get('region',''),'')} {x['name']}" + (" (잠정일)" if x.get("tentative") else "")
+            for x in e["events"])
+        lines = [f"🎯 <b>이벤트 데이 결과</b> · {kdate(d)}", ev_names, ""]
+        for lbl, _f, _y, flag in INDICES:
+            r = e["indices"][lbl]; dirn = r["direction"]; emo = DIR_EMOJI.get(dirn, "⏳")
             if dirn in ("up", "down", "flat") and r.get("change_pct") is not None:
                 val = f"{emo} {r['change_pct']:+.2f}%"
                 if r.get("close") is not None:
@@ -362,8 +349,7 @@ def notify(new_events, history, cfg):
             else:
                 val = "⏳ 데이터 대기"
             lines.append(f"{flag} {lbl:<7} {val}")
-        lines += ["", f"📊 <a href='{REPO_URL}'>대시보드 열기</a>",
-                  f"누적: 완료 {done_n}건"]
+        lines += ["", f"📊 <a href='{PAGES_URL}'>대시보드 열기</a>", f"누적: 완료 {done_n}일"]
         try:
             requests.post(f"https://api.telegram.org/bot{token}/sendMessage",
                           json={"chat_id": chat, "text": "\n".join(lines),
@@ -377,22 +363,22 @@ def notify(new_events, history, cfg):
 def main():
     cfg = load_config()
     events = load_json(EVENTS_PATH, {"events": []})["events"]
-    events = sorted(events, key=lambda x: x["date"])
     history = load_json(HISTORY_PATH, {})
-    # 메타키(_로 시작) 제거
     history = {k: v for k, v in history.items() if not k.startswith("_")}
+    by_date = group_by_date(events)
 
-    history, new_events = process(events, history)
+    history, new_dates = process(by_date, history)
 
     save_json(HISTORY_PATH, history)
-    render_readme(events, history)
-    render_html(events, history)
-    notify(new_events, history, cfg)
+    render_readme(by_date, history)
+    render_html(by_date, history)
+    notify(new_dates, history, cfg)
 
-    print(f"[OK] events={len(events)} recorded={len(history)} new_this_run={len(new_events)}")
-    for d, e in new_events:
+    print(f"[OK] event-days={len(by_date)} recorded={len(history)} new_this_run={len(new_dates)}")
+    for d, e in new_dates:
+        names = " + ".join(x["name"] for x in e["events"])
         dirs = " ".join(f"{lbl}:{e['indices'][lbl]['direction']}" for lbl, *_ in INDICES)
-        print(f"     + {d} {e['event']} | {dirs}")
+        print(f"     + {d} [{names}] | {dirs}")
 
 
 if __name__ == "__main__":
