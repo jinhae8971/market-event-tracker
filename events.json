@@ -11,6 +11,9 @@
     {"date": "2026-07-22", "name": "ECB 통화정책회의", "region": "EU", "importance": "low"},
     {"date": "2026-07-29", "name": "미국 FOMC (금리결정)", "region": "US", "importance": "high"},
     {"date": "2026-07-29", "name": "SK하이닉스 2Q 실적", "region": "KR", "importance": "high", "tentative": true},
-    {"date": "2026-07-30", "name": "BOJ / BOE 통화정책회의", "region": "GL", "importance": "mid"}
+    {"date": "2026-07-29", "name": "SK하이닉스 신주(원주) 상장", "region": "KR", "importance": "high"},
+    {"date": "2026-07-29", "name": "미국 빅테크 실적 (MS·알파벳·메타)", "region": "US", "importance": "high", "tentative": true},
+    {"date": "2026-07-30", "name": "BOJ / BOE 통화정책회의", "region": "GL", "importance": "mid"},
+    {"date": "2026-07-30", "name": "미국 빅테크 실적 (애플·아마존)", "region": "US", "importance": "high", "tentative": true}
   ]
 }
