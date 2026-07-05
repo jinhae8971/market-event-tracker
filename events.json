@@ -1,0 +1,13 @@
+{
+  "_comment": "추적 대상 증시 이벤트. date=국내/미국 지수 등락을 기록할 기준일(YYYY-MM-DD). importance: high|mid|low. region: KR|US|EU|GL. 신규 이벤트는 배열에 추가만 하면 자동 추적됨.",
+  "events": [
+    {"date": "2026-07-07", "name": "삼성전자 2Q 잠정실적", "region": "KR", "importance": "high"},
+    {"date": "2026-07-09", "name": "옵션만기일 (7월물)", "region": "KR", "importance": "mid"},
+    {"date": "2026-07-14", "name": "연준 반기 의회 증언", "region": "US", "importance": "mid"},
+    {"date": "2026-07-15", "name": "연준 베이지북", "region": "US", "importance": "low"},
+    {"date": "2026-07-16", "name": "한국 금융통화위원회", "region": "KR", "importance": "high"},
+    {"date": "2026-07-22", "name": "ECB 통화정책회의", "region": "EU", "importance": "low"},
+    {"date": "2026-07-29", "name": "미국 FOMC (금리결정)", "region": "US", "importance": "high"},
+    {"date": "2026-07-30", "name": "BOJ / BOE 통화정책회의", "region": "GL", "importance": "mid"}
+  ]
+}

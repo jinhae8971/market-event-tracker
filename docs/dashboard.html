@@ -1,0 +1,27 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Market Event Tracker</title>
+<style>
+:root{color-scheme:light dark}
+*{box-sizing:border-box}
+body{font-family:-apple-system,'Segoe UI',Roboto,'Noto Sans KR',sans-serif;margin:0;background:#0d1117;color:#e6edf3;padding:24px}
+.wrap{max-width:920px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:#8b949e;font-size:13px;margin-bottom:20px}
+.card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:18px 20px;margin-bottom:18px}
+h2{font-size:15px;margin:0 0 12px;color:#c9d1d9}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 8px;border-bottom:1px solid #21262d}
+th{text-align:center;color:#8b949e;font-weight:600;font-size:12px}
+td{text-align:center}
+.legend{font-size:12px;color:#8b949e;line-height:1.9}
+</style></head><body><div class="wrap">
+<h1>📊 Market Event Tracker</h1>
+<div class="sub">2026 주요 증시 이벤트 당일 국내/미국 등락 누적 · 최종 업데이트 2026-07-06 07:37 KST</div>
+<div class="card"><h2>✅ 완료된 이벤트 — 당일 등락</h2>
+<table><thead><tr><th>날짜</th><th style="text-align:left">이벤트</th><th>중요도</th><th>🇰🇷 KOSPI</th><th>🇺🇸 S&amp;P500</th><th>🇺🇸 NASDAQ</th></tr></thead><tbody><tr><td colspan="6" style="text-align:center;color:#868e96;padding:24px">아직 도래한 이벤트가 없습니다</td></tr></tbody></table></div>
+<div class="card"><h2>⏳ 예정된 이벤트</h2>
+<table><thead><tr><th>날짜</th><th style="text-align:left">이벤트</th><th>중요도</th></tr></thead><tbody><tr><td>07/07 (화)</td><td style="text-align:left">삼성전자 2Q 잠정실적</td><td style="text-align:center">⭐⭐</td></tr><tr><td>07/09 (목)</td><td style="text-align:left">옵션만기일 (7월물)</td><td style="text-align:center">⭐</td></tr><tr><td>07/14 (화)</td><td style="text-align:left">연준 반기 의회 증언</td><td style="text-align:center">⭐</td></tr><tr><td>07/15 (수)</td><td style="text-align:left">연준 베이지북</td><td style="text-align:center">·</td></tr><tr><td>07/16 (목)</td><td style="text-align:left">한국 금융통화위원회</td><td style="text-align:center">⭐⭐</td></tr><tr><td>07/22 (수)</td><td style="text-align:left">ECB 통화정책회의</td><td style="text-align:center">·</td></tr><tr><td>07/29 (수)</td><td style="text-align:left">미국 FOMC (금리결정)</td><td style="text-align:center">⭐⭐</td></tr><tr><td>07/30 (목)</td><td style="text-align:left">BOJ / BOE 통화정책회의</td><td style="text-align:center">⭐</td></tr></tbody></table></div>
+<div class="card legend">🔺 상승 · 🔻 하락 · ➖ 보합 · ⚪ 휴장 · ⏳ 대기<br>
+원천: FinanceDataReader → yfinance 폴백 · 등락 = 당일 종가 전일比</div>
+</div></body></html>
