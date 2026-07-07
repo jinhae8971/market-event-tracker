@@ -1,1 +1,31 @@
-{}
+{
+  "2026-07-07": {
+    "events": [
+      {
+        "name": "삼성전자 2Q 잠정실적",
+        "region": "KR",
+        "importance": "high",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 7656.31,
+        "change_pct": -4.91,
+        "direction": "down"
+      },
+      "S&P500": {
+        "close": 7503.85,
+        "change_pct": -0.45,
+        "direction": "down"
+      },
+      "NASDAQ": {
+        "close": 25818.69,
+        "change_pct": -1.16,
+        "direction": "down"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-08 08:27 KST"
+  }
+}
