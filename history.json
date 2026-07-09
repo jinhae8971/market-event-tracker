@@ -27,5 +27,34 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-08 08:27 KST"
+  },
+  "2026-07-09": {
+    "events": [
+      {
+        "name": "옵션만기일 (7월물)",
+        "region": "KR",
+        "importance": "mid",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 7291.91,
+        "change_pct": 0.62,
+        "direction": "up"
+      },
+      "S&P500": {
+        "close": 7543.64,
+        "change_pct": 0.81,
+        "direction": "up"
+      },
+      "NASDAQ": {
+        "close": 26206.89,
+        "change_pct": 1.3,
+        "direction": "up"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-10 08:43 KST"
   }
 }
