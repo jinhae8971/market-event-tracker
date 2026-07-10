@@ -56,5 +56,34 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-10 08:43 KST"
+  },
+  "2026-07-10": {
+    "events": [
+      {
+        "name": "SK하이닉스 ADR 나스닥 상장 (SKHY)",
+        "region": "US",
+        "importance": "high",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 7475.94,
+        "change_pct": 2.52,
+        "direction": "up"
+      },
+      "S&P500": {
+        "close": 7575.39,
+        "change_pct": 0.42,
+        "direction": "up"
+      },
+      "NASDAQ": {
+        "close": 26281.61,
+        "change_pct": 0.29,
+        "direction": "up"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-11 08:26 KST"
   }
 }
