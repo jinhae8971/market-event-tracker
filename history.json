@@ -85,5 +85,34 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-11 08:26 KST"
+  },
+  "2026-07-14": {
+    "events": [
+      {
+        "name": "연준 반기 의회 증언",
+        "region": "US",
+        "importance": "mid",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 6856.83,
+        "change_pct": 0.73,
+        "direction": "up"
+      },
+      "S&P500": {
+        "close": 7543.59,
+        "change_pct": 0.38,
+        "direction": "up"
+      },
+      "NASDAQ": {
+        "close": 26107.01,
+        "change_pct": 0.9,
+        "direction": "up"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-15 08:23 KST"
   }
 }
