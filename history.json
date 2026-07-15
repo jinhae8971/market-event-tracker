@@ -114,5 +114,34 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-15 08:23 KST"
+  },
+  "2026-07-15": {
+    "events": [
+      {
+        "name": "연준 베이지북",
+        "region": "US",
+        "importance": "low",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 7284.41,
+        "change_pct": 6.24,
+        "direction": "up"
+      },
+      "S&P500": {
+        "close": 7572.4,
+        "change_pct": 0.38,
+        "direction": "up"
+      },
+      "NASDAQ": {
+        "close": 26269.23,
+        "change_pct": 0.62,
+        "direction": "up"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-16 08:26 KST"
   }
 }
