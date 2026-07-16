@@ -143,5 +143,40 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-16 08:26 KST"
+  },
+  "2026-07-16": {
+    "events": [
+      {
+        "name": "한국 금융통화위원회",
+        "region": "KR",
+        "importance": "high",
+        "tentative": false
+      },
+      {
+        "name": "TSMC 2Q 실적",
+        "region": "TW",
+        "importance": "high",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 6820.6,
+        "change_pct": -6.37,
+        "direction": "down"
+      },
+      "S&P500": {
+        "close": 7533.77,
+        "change_pct": -0.51,
+        "direction": "down"
+      },
+      "NASDAQ": {
+        "close": 25881.95,
+        "change_pct": -1.47,
+        "direction": "down"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-17 08:23 KST"
   }
 }
