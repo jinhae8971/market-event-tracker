@@ -178,5 +178,34 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-17 08:23 KST"
+  },
+  "2026-07-22": {
+    "events": [
+      {
+        "name": "ECB 통화정책회의",
+        "region": "EU",
+        "importance": "low",
+        "tentative": false
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 6797.7,
+        "change_pct": 0.74,
+        "direction": "up"
+      },
+      "S&P500": {
+        "close": 7498.96,
+        "change_pct": -0.14,
+        "direction": "down"
+      },
+      "NASDAQ": {
+        "close": 25690.9,
+        "change_pct": -0.57,
+        "direction": "down"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-23 08:28 KST"
   }
 }
