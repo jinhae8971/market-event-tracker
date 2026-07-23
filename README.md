@@ -2,7 +2,7 @@
 
 > 2026년 주요 증시 이벤트 **당일** 국내(KOSPI)·미국(S&P500·NASDAQ) 등락을 자동 누적하는 대시보드
 >
-> 🕐 최종 업데이트: **2026-07-23 08:28 KST**  ·  🤖 GitHub Actions 자동 생성  ·  [웹 대시보드](https://jinhae8971.github.io/market-event-tracker/)
+> 🕐 최종 업데이트: **2026-07-24 08:26 KST**  ·  🤖 GitHub Actions 자동 생성  ·  [웹 대시보드](https://jinhae8971.github.io/market-event-tracker/)
 
 ---
 
