@@ -207,5 +207,52 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-23 08:28 KST"
+  },
+  "2026-07-29": {
+    "events": [
+      {
+        "name": "미국 FOMC (금리결정)",
+        "region": "US",
+        "importance": "high",
+        "tentative": false
+      },
+      {
+        "name": "SK하이닉스 2Q 실적",
+        "region": "KR",
+        "importance": "high",
+        "tentative": true
+      },
+      {
+        "name": "SK하이닉스 신주(원주) 상장",
+        "region": "KR",
+        "importance": "high",
+        "tentative": false
+      },
+      {
+        "name": "미국 빅테크 실적 (MS·알파벳·메타)",
+        "region": "US",
+        "importance": "high",
+        "tentative": true
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 5663.24,
+        "change_pct": -5.98,
+        "direction": "down"
+      },
+      "S&P500": {
+        "close": 7316.15,
+        "change_pct": -1.52,
+        "direction": "down"
+      },
+      "NASDAQ": {
+        "close": 24442.94,
+        "change_pct": -1.74,
+        "direction": "down"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-30 08:28 KST"
   }
 }
