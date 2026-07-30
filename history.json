@@ -254,5 +254,40 @@
     },
     "finalized": true,
     "recorded_at": "2026-07-30 08:28 KST"
+  },
+  "2026-07-30": {
+    "events": [
+      {
+        "name": "BOJ / BOE 통화정책회의",
+        "region": "GL",
+        "importance": "mid",
+        "tentative": false
+      },
+      {
+        "name": "미국 빅테크 실적 (애플·아마존)",
+        "region": "US",
+        "importance": "high",
+        "tentative": true
+      }
+    ],
+    "indices": {
+      "KOSPI": {
+        "close": 5593.56,
+        "change_pct": -1.23,
+        "direction": "down"
+      },
+      "S&P500": {
+        "close": 7437.63,
+        "change_pct": 1.66,
+        "direction": "up"
+      },
+      "NASDAQ": {
+        "close": 25122.18,
+        "change_pct": 2.78,
+        "direction": "up"
+      }
+    },
+    "finalized": true,
+    "recorded_at": "2026-07-31 08:30 KST"
   }
 }
